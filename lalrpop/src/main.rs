@@ -18,6 +18,7 @@ Usage: lalrpop [options] <inputs>...
 Options:
     -h, --help           Print help.
     -V, --version        Print version.
+    -a, --abnf           Export abnf like grammar.
     -l, --level LEVEL    Set the debug level. (Default: info)
                          Valid values: quiet, info, verbose, debug.
     -o, --out-dir DIR    Sets the directory in which to output the .rs file(s).
@@ -36,6 +37,7 @@ struct Args {
     flag_features: Option<String>,
     flag_level: Option<LevelFlag>,
     flag_help: bool,
+    flag_abnf: bool,
     flag_force: bool,
     flag_color: bool,
     flag_comments: bool,
@@ -73,6 +75,7 @@ fn parse_args(mut args: Arguments) -> Result<Args, pico_args::Error> {
         flag_features: args.opt_value_from_str("--features")?,
         flag_level: args.opt_value_from_fn(["-l", "--level"], LevelFlag::from_str)?,
         flag_help: args.contains(["-h", "--help"]),
+        flag_abnf: args.contains(["-a", "--abnf"]),
         flag_force: args.contains(["-f", "--force"]),
         flag_color: args.contains(["-c", "--color"]),
         flag_comments: args.contains("--comments"),
@@ -138,6 +141,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if let Some(ref flag_features) = args.flag_features {
         config.set_features(flag_features.split(',').map(String::from));
+    }
+
+    if args.flag_abnf {
+        if args.arg_inputs.len() != 1 {
+            return Err("Error: --abnf expected one file path".into());
+        }
+        let input = std::fs::read_to_string(&args.arg_inputs[0])?;
+        let abnf = lalrpop::grammar_to_abnf_like(&input);
+        println!("{}", abnf.trim_end());
+        return Ok(())
     }
 
     for arg in args.arg_inputs {
